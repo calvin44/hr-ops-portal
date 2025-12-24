@@ -21,7 +21,10 @@
     "paths": {
       "@/*": ["./*"], // Standard fallback
       "@types": ["./app/types"], // Specific alias for types folder
-      "@utils/*": ["./app/utils/*"] // Specific alias for utils folder
+      "@config": ["./app/config"], // Specific alias for customHooks folder
+      "@utils/*": ["./app/utils/*"], // Specific alias for utils folder
+      "@customHooks": ["./app/customHooks"], // Specific alias for customHooks folder
+      "@components": ["./app/components"] // Specific alias for customHooks folder
     }
   },
   "include": [
