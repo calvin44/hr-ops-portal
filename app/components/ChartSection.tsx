@@ -1,9 +1,10 @@
 'use client'
 
 import { Card, CardBody, Snippet } from '@heroui/react'
+import { UserLeaveReport } from '@types'
 
 interface ChartSectionProps {
-  selectedUserInfo: any
+  selectedUserInfo: UserLeaveReport
 }
 export const ChartSection: React.FC<ChartSectionProps> = ({ selectedUserInfo }) => {
   return (
