@@ -1,4 +1,5 @@
-import type { AsanaTask, UserLeaveProfile } from '@/app/types'
+import type { AsanaTask, AsanaUser, FinalReportItem, TransformedTaskData } from '@/app/types'
+import { convertToLookupObject, getLeaveData, normalizeEmail } from './googleSheet'
 
 const FIELD_NAMES = {
   LEAVE_DATE: 'Leave Date',
@@ -15,13 +16,13 @@ const COLOR_MAP: Record<string, string> = {
   default: '#9966ff',
 }
 
-export function transformAsanaData(asanaData: AsanaTask[]): UserLeaveProfile[] {
+export function transformAsanaData(asanaData: AsanaTask[]): TransformedTaskData[] {
   // Structure: User -> Date (YYYY-MM-DD) -> Leave Type -> Hours
   const userMap: Record<string, Record<string, Record<string, number>>> = {}
   const userTypes: Record<string, Set<string>> = {}
 
+  // Parse and Group Data (Logic remains the same)
   asanaData.forEach((task) => {
-    // Helper: Find custom field value by name (case-insensitive)
     const getValByName = (targetName: string) => {
       const field = task.custom_fields?.find(
         (f: any) => f.name.trim().toLowerCase() === targetName.trim().toLowerCase()
@@ -37,32 +38,34 @@ export function transformAsanaData(asanaData: AsanaTask[]): UserLeaveProfile[] {
     if (!name || !dateStr || !hoursStr) return
 
     const hours = parseFloat(hoursStr) || 0
-
-    // Extract YYYY-MM-DD to group by specific day
     const dateKey = dateStr.substring(0, 10)
 
     if (!userMap[name]) userMap[name] = {}
     if (!userMap[name][dateKey]) userMap[name][dateKey] = {}
     if (!userTypes[name]) userTypes[name] = new Set()
 
-    // Aggregate hours for this specific day and type
     const currentTotal = userMap[name][dateKey][type] || 0
     userMap[name][dateKey][type] = currentTotal + hours
 
     userTypes[name].add(type)
   })
 
-  // Convert map to Chart.js structure
+  // Build Charts and Calculate Totals per Type
   return Object.keys(userMap).map((user) => {
-    // Sort dates chronologically for X-axis
     const dates = Object.keys(userMap[user]).sort()
     const types = Array.from(userTypes[user])
 
+    // Container for our new specific totals
+    const totalsByType: Record<string, number> = {}
+
     const datasets = types.map((type) => {
-      // Map hours to the sorted dates, filling 0 for missing days
       const dataPoints = dates.map((date) => {
         return userMap[user][date][type] || 0
       })
+
+      // Sum the hours for this specific type
+      const typeTotal = dataPoints.reduce((sum, val) => sum + val, 0)
+      totalsByType[type] = typeTotal
 
       return {
         label: type,
@@ -71,15 +74,50 @@ export function transformAsanaData(asanaData: AsanaTask[]): UserLeaveProfile[] {
       }
     })
 
-    const totalHours = datasets.reduce((sum, ds) => sum + ds.data.reduce((a, b) => a + b, 0), 0)
-
     return {
       userName: user,
-      totalHours,
+      leaveTaken: totalsByType,
       chartData: {
         labels: dates,
         datasets: datasets,
       },
+    }
+  })
+}
+
+export async function mergeUsersWithData(
+  taskData: TransformedTaskData[],
+  asanaUsers: AsanaUser[]
+): Promise<FinalReportItem[]> {
+  const leaveData = await getLeaveData()
+  const lookupLeaveData = convertToLookupObject(leaveData)
+  return taskData.map((record) => {
+    const matchedUser = asanaUsers.find(
+      (u) => u.name.trim().toLowerCase() === record.userName.trim().toLowerCase()
+    )
+
+    const matchedUserEmail = normalizeEmail(matchedUser?.email || '')
+    const { staffId, chineseName, email, yearsOfService, annualLeaveQuota, sickLeaveQuota } =
+      lookupLeaveData[matchedUserEmail]
+
+    return {
+      user: {
+        name: record.userName,
+        staffId,
+        chineseName,
+        email,
+        yearsOfService,
+        annualLeaveQuota,
+        sickLeaveQuota,
+      },
+      stats: {
+        leaveTaken: record.leaveTaken,
+        remainder: {
+          'Annual Leave': annualLeaveQuota - (record.leaveTaken['Annual Leave'] ?? 0),
+          'Sick Leave': sickLeaveQuota - (record.leaveTaken['Sick Leave'] ?? 0),
+        },
+      },
+      chartConfig: record.chartData,
     }
   })
 }

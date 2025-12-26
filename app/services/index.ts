@@ -1,4 +1,4 @@
-import { UserLeaveProfile } from '@/app/types'
+import { UserLeaveProfile } from '@/app/types/utils'
 
 export const AsanaService = {
   async getLeaveData(): Promise<UserLeaveProfile[]> {
