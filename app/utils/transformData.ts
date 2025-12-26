@@ -1,4 +1,4 @@
-import type { AsanaTask, AsanaUser, FinalReportItem, TransformedTaskData } from '@/app/types'
+import type { AsanaTask, AsanaUser, UserLeaveReport, TransformedTaskData } from '@/app/types'
 import { convertToLookupObject, getLeaveData, normalizeEmail } from './googleSheet'
 
 const FIELD_NAMES = {
@@ -88,7 +88,7 @@ export function transformAsanaData(asanaData: AsanaTask[]): TransformedTaskData[
 export async function mergeUsersWithData(
   taskData: TransformedTaskData[],
   asanaUsers: AsanaUser[]
-): Promise<FinalReportItem[]> {
+): Promise<UserLeaveReport[]> {
   const leaveData = await getLeaveData()
   const lookupLeaveData = convertToLookupObject(leaveData)
   return taskData.map((record) => {

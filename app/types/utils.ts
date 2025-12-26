@@ -17,15 +17,6 @@ interface ChartConfig {
 
 interface RemainderSummary extends Pick<LeaveTypeHours, 'Annual Leave' | 'Sick Leave'> {}
 
-export interface UserLeaveProfile {
-  userName: string
-  leaveTaken: LeaveTypeHours
-  chartData: {
-    labels: string[]
-    datasets: Dataset[]
-  }
-}
-
 export interface Dataset {
   label: string
   data: number[]
@@ -38,7 +29,7 @@ export interface TransformedTaskData {
   chartData: ChartConfig
 }
 
-interface UserProfile {
+interface User {
   name: string
   staffId: string
   chineseName: string
@@ -48,8 +39,8 @@ interface UserProfile {
   sickLeaveQuota: number
 }
 
-export interface FinalReportItem {
-  user: UserProfile
+export interface UserLeaveReport {
+  user: User
   stats: {
     leaveTaken: LeaveTypeHours
     remainder: RemainderSummary
