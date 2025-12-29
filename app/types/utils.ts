@@ -40,6 +40,7 @@ interface User {
 }
 
 export interface UserLeaveReport {
+  id: string
   user: User
   stats: {
     leaveTaken: LeaveTypeHours

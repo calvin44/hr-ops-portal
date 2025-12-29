@@ -1,5 +1,6 @@
 import type { AsanaTask, AsanaUser, UserLeaveReport, TransformedTaskData } from '@/app/types'
 import { convertToLookupObject, getLeaveData, normalizeEmail } from './googleSheet'
+import { v4 as uuidv4 } from 'uuid'
 
 const FIELD_NAMES = {
   LEAVE_DATE: 'Leave Date',
@@ -101,6 +102,7 @@ export async function mergeUsersWithData(
       lookupLeaveData[matchedUserEmail]
 
     return {
+      id: uuidv4(),
       user: {
         name: record.userName,
         staffId,
@@ -113,8 +115,8 @@ export async function mergeUsersWithData(
       stats: {
         leaveTaken: record.leaveTaken,
         remainder: {
-          'Annual Leave': annualLeaveQuota - (record.leaveTaken['Annual Leave'] ?? 0),
-          'Sick Leave': sickLeaveQuota - (record.leaveTaken['Sick Leave'] ?? 0),
+          'Annual Leave': annualLeaveQuota * 8 - (record.leaveTaken['Annual Leave'] ?? 0),
+          'Sick Leave': sickLeaveQuota * 8 - (record.leaveTaken['Sick Leave'] ?? 0),
         },
       },
       chartConfig: record.chartData,
