@@ -1,4 +1,3 @@
-import 'server-only'
 import { GoogleSpreadsheet } from 'google-spreadsheet'
 import { JWT } from 'google-auth-library'
 
@@ -50,7 +49,7 @@ export const getLeaveData = async (sheetName: string = 'StaffList'): Promise<Emp
     const rows = await sheet.getRows()
 
     return rows.map((row) => {
-      // 1. Gather raw manager values (Let them be undefined/null if empty)
+      // Gather raw manager values (Let them be undefined/null if empty)
       const rawManagers = [
         row.get('Manager 1'),
         row.get('Manager 2'),
@@ -66,7 +65,7 @@ export const getLeaveData = async (sheetName: string = 'StaffList'): Promise<Emp
         staffId: row.get('Staff ID') || '',
         chineseName: row.get('Chinese name') || '',
         englishName: row.get('English Name') || '',
-        // 3. Use the same helper for the employee email
+        // Use the same helper for the employee email
         email: normalizeEmail(row.get('Email')) || '',
 
         managers: cleanManagers,

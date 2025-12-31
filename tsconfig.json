@@ -24,7 +24,6 @@
       "@utils/*": ["./app/utils/*"], // Specific alias for utils folder
       "@types": ["./app/types"], // Specific alias for types folder
       "@config": ["./app/config"], // Specific alias for customHooks folder
-      "@customHooks": ["./app/customHooks"], // Specific alias for customHooks folder
       "@components": ["./app/components"], // Specific alias for components folder
       "@services": ["./app/services"], // Specific alias for services folder
       "@context": ["./app/context"] // Specific alias for context folder

@@ -61,8 +61,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return
       }
     } catch (err: any) {
-      if (err.code !== 'auth/popup-closed-by-user') {
-        setError(err.message || 'Unauthorized access.')
+      // HANDLE POPUP CLOSED BY USER
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('Sign-in cancelled. Please try again when ready.')
+      } else {
+        setError(err.message || 'An unexpected error occurred.')
       }
     } finally {
       setIsLoggingIn(false)
@@ -135,10 +138,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                       Secure identification required to <br /> manage employee records.
                     </p>
                     {error && (
-                      <div className="bg-danger-50 text-danger-600 border-danger-100 mb-6 flex animate-pulse items-center gap-2 rounded-xl border p-3 text-xs font-bold">
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className={`mb-6 flex items-center gap-2 rounded-xl border p-3 text-xs font-bold transition-colors ${
+                          error.includes('cancelled')
+                            ? 'bg-default-100 text-default-600 border-default-200'
+                            : 'bg-danger-50 text-danger-600 border-danger-100 animate-pulse'
+                        }`}
+                      >
                         <AlertCircle size={14} />
                         {error}
-                      </div>
+                      </motion.div>
                     )}
                     <Button
                       color="primary"

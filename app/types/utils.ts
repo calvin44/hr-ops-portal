@@ -1,4 +1,4 @@
-export interface LeaveTypeHours {
+export interface LeaveUsage {
   'Annual Leave'?: number
   WFH?: number
   'Sick Leave'?: number
@@ -6,30 +6,20 @@ export interface LeaveTypeHours {
   Others?: number
 }
 
-interface ChartConfig {
-  labels: string[]
-  datasets: {
-    label: string
-    data: number[]
-    backgroundColor: string
-  }[]
-}
-
-interface RemainderSummary extends Pick<LeaveTypeHours, 'Annual Leave' | 'Sick Leave'> {}
-
-export interface Dataset {
+export interface ChartDataset {
   label: string
   data: number[]
   backgroundColor: string
 }
 
-export interface TransformedTaskData {
-  userName: string
-  leaveTaken: LeaveTypeHours
-  chartData: ChartConfig
+export interface ChartConfig {
+  labels: string[]
+  datasets: ChartDataset[]
 }
 
-interface User {
+export interface LeaveBalance extends Pick<LeaveUsage, 'Annual Leave' | 'Sick Leave'> {}
+
+export interface Employee {
   name: string
   staffId: string
   chineseName: string
@@ -42,10 +32,16 @@ interface User {
 
 export interface UserLeaveReport {
   id: string
-  user: User
+  user: Employee
   stats: {
-    leaveTaken: LeaveTypeHours
-    remainder: RemainderSummary
+    leaveTaken: LeaveUsage
+    balance: LeaveBalance
   }
   chartConfig: ChartConfig
+}
+
+export interface StaffLeaveAnalytics {
+  userName: string
+  leaveTaken: LeaveUsage
+  chartData: ChartConfig
 }

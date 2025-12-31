@@ -36,7 +36,7 @@ export function Sidebar() {
           aria-label="Main Menu"
           variant="flat"
           color="primary"
-          // We use 'rounded-xl' for items because they are nested.
+          // Use 'rounded-xl' for items because they are nested.
           // Inner items should always have a smaller radius than the parent container.
           itemClasses={{
             base: 'px-4 h-12 rounded-xl gap-4 mb-2 data-[hover=true]:bg-primary/5 transition-all',
@@ -69,7 +69,7 @@ export function Sidebar() {
             }
           >
             <span className={pathname === ROUTES.emails ? 'text-primary font-bold' : ''}>
-              Email Inbox
+              Mail Users
             </span>
           </ListboxItem>
         </Listbox>

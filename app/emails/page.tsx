@@ -60,14 +60,14 @@ export default function EmailsPage() {
    * Data Initialization (Fixed Double Fetch)
    */
   useEffect(() => {
-    let isMounted = true // 1. Track mount status
+    let isMounted = true
 
     const fetchData = async () => {
       setIsLoading(true)
       try {
         const data = await apiServices.getLeaveData()
 
-        // 2. Only update state if the component is still mounted
+        // Only update state if the component is still mounted
         if (isMounted) {
           const sortedData = [...data].sort((a, b) => a.user.name.localeCompare(b.user.name))
           setUserData(sortedData)
@@ -81,7 +81,7 @@ export default function EmailsPage() {
 
     fetchData()
 
-    // 3. Cleanup function sets flag to false when effect re-runs or component unmounts
+    // Cleanup function sets flag to false when effect re-runs or component unmounts
     return () => {
       isMounted = false
     }

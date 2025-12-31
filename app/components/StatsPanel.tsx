@@ -31,7 +31,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ userInfo, isLoading }) =
 
     const getQuotaStats = (type: 'Annual Leave' | 'Sick Leave', quotaDays: number) => {
       const total = quotaDays * 8
-      const remainder = userInfo.stats.remainder[type] || 0
+      const remainder = userInfo.stats.balance[type] || 0
       const used = total - remainder
       return {
         used,

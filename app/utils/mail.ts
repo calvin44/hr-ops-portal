@@ -9,9 +9,9 @@ export const generateEmailTemplate = (data: UserLeaveReport, chartUrl: string) =
 
   // Extracting data from the stats interface
   const annualTaken = stats.leaveTaken['Annual Leave'] || 0
-  const annualRemaining = stats.remainder['Annual Leave'] || 0
+  const annualRemaining = stats.balance['Annual Leave'] || 0
   const sickTaken = stats.leaveTaken['Sick Leave'] || 0
-  const sickRemaining = stats.remainder['Sick Leave'] || 0
+  const sickRemaining = stats.balance['Sick Leave'] || 0
   const wfhTaken = stats.leaveTaken.WFH || 0
 
   // Senior Logic: Helper to determine text color based on balance

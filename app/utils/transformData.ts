@@ -1,4 +1,4 @@
-import type { AsanaTask, AsanaUser, UserLeaveReport, TransformedTaskData } from '@/app/types'
+import type { AsanaTask, AsanaUser, StaffLeaveAnalytics, UserLeaveReport } from '@/app/types'
 import { convertToLookupObject, getLeaveData, normalizeEmail } from './googleSheet'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -17,7 +17,7 @@ const COLOR_MAP: Record<string, string> = {
   default: '#9966ff',
 }
 
-export function transformAsanaData(asanaData: AsanaTask[]): TransformedTaskData[] {
+export function transformAsanaData(asanaData: AsanaTask[]): StaffLeaveAnalytics[] {
   // Structure: User -> Date (YYYY-MM-DD) -> Leave Type -> Hours
   const userMap: Record<string, Record<string, Record<string, number>>> = {}
   const userTypes: Record<string, Set<string>> = {}
@@ -87,7 +87,7 @@ export function transformAsanaData(asanaData: AsanaTask[]): TransformedTaskData[
 }
 
 export async function mergeUsersWithData(
-  taskData: TransformedTaskData[],
+  taskData: StaffLeaveAnalytics[],
   asanaUsers: AsanaUser[]
 ): Promise<UserLeaveReport[]> {
   const leaveData = await getLeaveData()
@@ -122,7 +122,7 @@ export async function mergeUsersWithData(
       },
       stats: {
         leaveTaken: record.leaveTaken,
-        remainder: {
+        balance: {
           'Annual Leave': annualLeaveQuota * 8 - (record.leaveTaken['Annual Leave'] ?? 0),
           'Sick Leave': sickLeaveQuota * 8 - (record.leaveTaken['Sick Leave'] ?? 0),
         },

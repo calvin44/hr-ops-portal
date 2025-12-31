@@ -24,7 +24,7 @@ export async function GET() {
       }),
       usersApi.getUsers({
         workspace: process.env.WORKSPACE_GID || '',
-        opt_fields: 'email,name,photo.image_128x128',
+        opt_fields: 'email,name',
       }),
     ])
 

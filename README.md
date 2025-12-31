@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HR Analytics & Leave Dispatch Portal
 
-## Getting Started
+A professional-grade internal management tool built to bridge the gap between employee leave tracking and automated HR communication.
 
-First, run the development server:
+> **Note to Reviewers:** This repository is a technical showcase. Due to the sensitive nature of HR data and security configurations (Firebase/OAuth), the environment variables are not public. Please refer to the **Technical Highlights** section to see the implementation details.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🎯 Project Purpose
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Managing leave quotas manually often leads to communication gaps. This portal was built to:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Centralize Data**: Provide a single dashboard for HR to monitor leave utilization across multiple departments.
+- **Automate Outreach**: Streamline employee notifications via an automated email dispatch system.
+- **Guarantee Security**: Implement strict enterprise-grade security through Google OAuth and admin whitelisting.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🛠 Technical Highlights
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 1. Robust State & Effect Management
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+I focused on handling complex React lifecycles to ensure a "production-ready" feel:
 
-## Deploy on Vercel
+- **Race Condition Prevention**: Implemented cleanup flags (`isMounted`) in `useEffect` to prevent "double-fetching" and state updates on unmounted components.
+- **Batch Processing**: Built a sequential email dispatcher with SMTP throttling protection and a real-time progress tracker using `useMemo` for optimized performance.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 2. High-Fidelity UI/UX
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Modern Aesthetic**: Leveraged **HeroUI** and **Tailwind CSS** to create a custom "Portal" design system with signature `rounded-portal` tokens and glassmorphism.
+- **Fluid Animations**: Orchestrated **Framer Motion** variants to handle skeleton transitions and "waterfall" list loading, ensuring a polished user experience with zero layout shift.
+
+### 3. Security-First Architecture
+
+- **Auth Guard**: Developed a custom `AuthProvider` that intercepts Firebase authentication to validate users against a server-side whitelist before granting access to the application context.
+- **Type-Safe Domain**: Strictly typed the entire ecosystem (`Employee`, `LeaveUsage`, `Analytics`) to ensure data integrity when merging Asana API data with internal database records.
+
+---
+
+## 🏗 Modular Architecture
+
+The codebase is organized following atomic design and modular principles:
+
+- **`/@types`**: Centralized domain models (Matches backend structure for zero-mapping overhead).
+- **`/@context`**: Global Auth & Security Guard logic.
+- **`/@components`**: Reusable UI units (StatsPanel, UsersTable, Sidebar).
+- **`/@services`**: Abstracted API layer for third-party integrations.
+
+---
+
+## 🚀 Key Features
+
+- **Interactive Quota Tracking**: Visual progress bars for Annual and Sick leave with automated "Exceeded" pulse alerts.
+- **Drill-down Analytics**: Specialized modal breakdown for non-quota leave types like WFH, Personal, or Compassionate leave.
+- **Intelligent Dispatch**: A robust email queue system with status persistence (Sent/Sending/Pending) and batch-send capabilities.
+
+---
+
+## 💻 Tech Stack
+
+- **Core**: Next.js 15 (App Router), TypeScript
+- **UI/UX**: HeroUI, Tailwind CSS, Framer Motion, Lucide Icons
+- **Backend/BaaS**: Firebase Auth, Firestore
+- **Data Vis**: Chart.js
+
+---
+
+## 📄 License
+
+This project is for demonstration purposes and is licensed under the MIT License.
