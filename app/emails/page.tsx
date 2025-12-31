@@ -1,7 +1,7 @@
 'use client'
 
 import { Card, CardHeader, CardBody, User, Button, Chip, Skeleton } from '@heroui/react'
-import { MailPlus, Send, Check, RotateCcw } from 'lucide-react'
+import { Send, Check, RotateCcw, Mails } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { apiServices } from '@services'
 import { UserLeaveReport } from '@types'
@@ -9,10 +9,33 @@ import { UserLeaveReport } from '@types'
 export default function EmailsPage() {
   const [userData, setUserData] = useState<UserLeaveReport[]>([])
   const [isLoading, setIsLoading] = useState(true)
-
+  const [sendingIds, setSendingIds] = useState<Set<string>>(new Set())
   const [sentIds, setSentIds] = useState<Set<string>>(new Set())
   const [isSendingAll, setIsSendingAll] = useState(false)
 
+  /**
+ /**
+   * Browser Guard:
+   * Prevents accidental tab closure during batch processing.
+   * Silences ts(6385) by using the return value pattern instead of property assignment.
+   */
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isSendingAll) {
+        e.preventDefault()
+        // Modern standard: returning a string triggers the browser dialog
+        return ''
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [isSendingAll])
+
+  /**
+   * Data Initialization:
+   * Fetch and sort employee leave records.
+   */
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true)
@@ -29,23 +52,46 @@ export default function EmailsPage() {
     fetchData()
   }, [])
 
-  // 2. Updated Send Handler with UI feedback
-  const handleSendMail = async (reportId: string) => {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 800))
+  /**
+   * Single Email Logic:
+   * Handles individual API calls and updates local flight/success states.
+   */
+  const handleSendMail = async (report: UserLeaveReport) => {
+    if (sentIds.has(report.id) || sendingIds.has(report.id)) return
 
-    setSentIds((prev) => {
-      const next = new Set(prev)
-      next.add(reportId)
-      return next
-    })
+    setSendingIds((prev) => new Set(prev).add(report.id))
+
+    try {
+      await apiServices.sendLeaveMail(report)
+      setSentIds((prev) => new Set(prev).add(report.id))
+    } catch (err) {
+      console.error('Send Error:', err)
+      alert(err instanceof Error ? err.message : 'Failed to send mail')
+    } finally {
+      setSendingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(report.id)
+        return next
+      })
+    }
   }
 
+  /**
+   * Batch Processing Logic:
+   * Iterates through pending reports sequentially to respect SMTP limits.
+   */
   const handleSendAll = async () => {
     setIsSendingAll(true)
-    for (const report of userData) {
-      if (!sentIds.has(report.id)) {
-        await handleSendMail(report.id)
+    const pendingReports = userData.filter((report) => !sentIds.has(report.id))
+
+    for (const report of pendingReports) {
+      try {
+        await handleSendMail(report)
+        // Artificial delay for UI visibility and SMTP kindness
+        await new Promise((resolve) => setTimeout(resolve, 200))
+      } catch (err) {
+        console.error(`Batch process failed for ${report.user.name}:`, err)
+        continue
       }
     }
     setIsSendingAll(false)
@@ -55,25 +101,39 @@ export default function EmailsPage() {
     <Card className="h-full w-full" shadow="none">
       <CardHeader className="flex items-center justify-between px-6 pt-6 pb-2">
         <h1 className="text-2xl font-bold">Inbox</h1>
-        <div className="flex gap-2">
-          {sentIds.size > 0 && (
+
+        <div className="flex items-center gap-4">
+          {isSendingAll && (
+            <div
+              className="fixed inset-0 z-100 cursor-wait bg-black/5"
+              onClick={(e) => e.preventDefault()}
+            />
+          )}
+
+          {sentIds.size > 0 && !isSendingAll && (
             <Button
               variant="light"
               size="sm"
               onPress={() => setSentIds(new Set())}
               startContent={<RotateCcw className="h-3 w-3" />}
             >
-              Reset
+              Reset Status
             </Button>
           )}
+
           <Button
             color="primary"
             onPress={handleSendAll}
             isLoading={isSendingAll}
             isDisabled={isLoading || userData.length === 0 || sentIds.size === userData.length}
-            startContent={!isSendingAll && <MailPlus className="h-4 w-4" />}
+            // Show the Mails icon only when not loading
+            startContent={!isSendingAll && <Mails className="h-4 w-4" />}
           >
-            {sentIds.size === userData.length ? 'All Sent' : 'Send All Mail'}
+            {sentIds.size === userData.length
+              ? 'All Sent'
+              : sentIds.size > 0
+                ? `Send Remaining (${userData.length - sentIds.size})`
+                : 'Send All Mail'}
           </Button>
         </div>
       </CardHeader>
@@ -84,21 +144,14 @@ export default function EmailsPage() {
             <Card key={i} shadow="none" className="border-default-200 w-full rounded-xl p-4">
               <CardBody className="flex flex-row items-center justify-between gap-4 p-4">
                 <div className="flex items-center gap-4">
-                  {/* Avatar Skeleton */}
                   <Skeleton className="flex h-10 w-10 rounded-full" />
-
                   <div className="flex flex-col gap-2">
-                    {/* Name Skeleton */}
                     <Skeleton className="h-3 w-32 rounded-lg" />
-                    {/* Email/Description Skeleton */}
                     <Skeleton className="h-2 w-48 rounded-lg" />
                   </div>
                 </div>
-
                 <div className="flex items-center gap-4">
-                  {/* Staff ID Skeleton */}
                   <Skeleton className="h-3 w-16 rounded-lg" />
-                  {/* Button Skeleton */}
                   <Skeleton className="h-10 w-28 rounded-xl" />
                 </div>
               </CardBody>
@@ -107,6 +160,7 @@ export default function EmailsPage() {
         ) : userData.length > 0 ? (
           userData.map((report) => {
             const isSent = sentIds.has(report.id)
+            const isSending = sendingIds.has(report.id)
 
             return (
               <Card
@@ -154,8 +208,9 @@ export default function EmailsPage() {
                       variant={isSent ? 'light' : 'flat'}
                       color={isSent ? 'success' : 'primary'}
                       className="font-bold"
-                      onPress={() => handleSendMail(report.id)}
-                      isDisabled={isSent}
+                      isLoading={isSending}
+                      isDisabled={isSent || isSendingAll}
+                      onPress={() => handleSendMail(report)}
                       startContent={
                         isSent ? <Check className="h-4 w-4" /> : <Send className="h-4 w-4" />
                       }
