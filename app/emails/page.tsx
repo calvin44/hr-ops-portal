@@ -1,7 +1,17 @@
 'use client'
 
-import { Card, CardHeader, CardBody, User, Button, Chip, Skeleton, Progress } from '@heroui/react'
-import { Send, Check, RotateCcw, Mails, Inbox } from 'lucide-react'
+import {
+  Card,
+  CardHeader,
+  CardBody,
+  User,
+  Button,
+  Chip,
+  Skeleton,
+  Progress,
+  Tooltip,
+} from '@heroui/react'
+import { Send, Check, RotateCcw, Mails, Inbox, ShieldCheck } from 'lucide-react'
 import { useEffect, useState, useMemo } from 'react'
 import { motion, AnimatePresence, Variants } from 'framer-motion'
 import { apiServices } from '@services'
@@ -33,6 +43,19 @@ const itemVariants: Variants = {
       damping: 24,
     },
   },
+}
+
+const buttonHover: Variants = {
+  rest: { scale: 1 },
+  hover: {
+    scale: 1.05,
+    transition: {
+      type: 'spring',
+      stiffness: 400,
+      damping: 10,
+    },
+  },
+  tap: { scale: 0.95 },
 }
 
 export default function EmailsPage() {
@@ -151,21 +174,22 @@ export default function EmailsPage() {
                 Reset Status
               </Button>
             )}
-
-            <Button
-              color="primary"
-              onPress={handleSendAll}
-              isLoading={isSendingAll}
-              isDisabled={isLoading || userData.length === 0 || sentIds.size === userData.length}
-              startContent={!isSendingAll && <Mails className="h-4 w-4" />}
-              className="shadow-primary/20 h-12 rounded-xl px-6 font-bold shadow-lg"
-            >
-              {sentIds.size === userData.length
-                ? 'All Delivered'
-                : sentIds.size > 0
-                  ? `Send Remaining (${userData.length - sentIds.size})`
-                  : 'Send Batch'}
-            </Button>
+            <motion.div variants={buttonHover} initial="rest" whileHover="hover" whileTap="tap">
+              <Button
+                color="primary"
+                onPress={handleSendAll}
+                isLoading={isSendingAll}
+                isDisabled={isLoading || userData.length === 0 || sentIds.size === userData.length}
+                startContent={!isSendingAll && <Mails className="h-4 w-4" />}
+                className="shadow-primary/20 h-12 rounded-xl px-6 font-bold shadow-lg"
+              >
+                {sentIds.size === userData.length
+                  ? 'All Delivered'
+                  : sentIds.size > 0
+                    ? `Send Remaining (${userData.length - sentIds.size})`
+                    : 'Send Batch'}
+              </Button>
+            </motion.div>
           </div>
         </div>
 
@@ -229,7 +253,7 @@ export default function EmailsPage() {
                     >
                       <CardBody className="flex flex-row items-center justify-between gap-4 p-4">
                         <User
-                          name={report.user.name}
+                          name={`${report.user.name} | ${report.user.chineseName}`}
                           description={report.user.email}
                           avatarProps={{
                             showFallback: true,
@@ -238,7 +262,39 @@ export default function EmailsPage() {
                             className: 'font-bold',
                           }}
                         />
-
+                        <div className="flex flex-1 justify-end gap-6">
+                          {report.user.managers && report.user.managers.length > 0 && (
+                            <Tooltip
+                              showArrow
+                              placement="top"
+                              content={
+                                <div className="px-1 py-2">
+                                  <div className="text-tiny text-default-400 mb-1 font-bold uppercase">
+                                    Notifying Managers:
+                                  </div>
+                                  <div className="flex flex-col gap-1">
+                                    {report.user.managers.map((m) => (
+                                      <span key={m} className="text-small font-medium">
+                                        {m}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              }
+                            >
+                              <Chip
+                                variant="flat"
+                                size="lg"
+                                startContent={<ShieldCheck size={14} className="ml-1" />}
+                                className="cursor-help border-none bg-slate-200/50 text-slate-600"
+                              >
+                                {report.user.managers.length === 1
+                                  ? '1 Manager'
+                                  : `${report.user.managers.length} Managers`}
+                              </Chip>
+                            </Tooltip>
+                          )}
+                        </div>
                         <div className="flex items-center gap-4">
                           {isSent && (
                             <Chip
@@ -251,21 +307,31 @@ export default function EmailsPage() {
                               Sent
                             </Chip>
                           )}
-
-                          <Button
-                            size="md"
-                            variant={isSent ? 'light' : 'flat'}
-                            color={isSent ? 'success' : 'primary'}
-                            className="rounded-xl font-bold"
-                            isLoading={isSending}
-                            isDisabled={isSent || isSendingAll}
-                            onPress={() => handleSendMail(report)}
-                            startContent={
-                              isSent ? <Check className="h-4 w-4" /> : <Send className="h-4 w-4" />
-                            }
+                          <motion.div
+                            variants={buttonHover}
+                            initial="rest"
+                            whileHover="hover"
+                            whileTap="tap"
                           >
-                            {isSent ? 'Delivered' : 'Send Mail'}
-                          </Button>
+                            <Button
+                              size="md"
+                              variant={isSent ? 'light' : 'flat'}
+                              color={isSent ? 'success' : 'primary'}
+                              className="rounded-xl font-bold"
+                              isLoading={isSending}
+                              isDisabled={isSent || isSendingAll}
+                              onPress={() => handleSendMail(report)}
+                              startContent={
+                                isSent ? (
+                                  <Check className="h-4 w-4" />
+                                ) : (
+                                  <Send className="h-4 w-4" />
+                                )
+                              }
+                            >
+                              {isSent ? 'Delivered' : 'Send Mail'}
+                            </Button>
+                          </motion.div>
                         </div>
                       </CardBody>
                     </Card>
