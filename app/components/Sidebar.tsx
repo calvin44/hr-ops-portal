@@ -1,3 +1,4 @@
+// components/Sidebar.tsx
 'use client'
 
 import Link from 'next/link'
@@ -5,84 +6,88 @@ import { usePathname } from 'next/navigation'
 import { Listbox, ListboxItem } from '@heroui/react'
 import { LayoutDashboard, Mail, LogOut, Bell } from 'lucide-react'
 import { ROUTES } from '@config'
+import { useAuth } from '@context'
 
 export function Sidebar() {
-  const pathname = usePathname() // Get current route (e.g., "/emails")
+  const pathname = usePathname()
+  const { logout } = useAuth()
 
   const iconClasses =
     'w-5 h-5 text-default-500 group-data-[hover=true]:text-foreground transition-colors'
 
   return (
-    <aside className="bg-background flex h-full w-72 flex-col justify-between rounded-2xl px-4 py-6">
-      {/* TOP SECTION */}
+    <aside className="rounded-portal flex h-full w-72 flex-col justify-between overflow-hidden bg-white px-4 py-8">
       <div>
         <Link
           href={ROUTES.home}
-          className="mb-8 flex cursor-pointer items-center gap-3 px-2 text-inherit transition-opacity hover:opacity-80"
+          className="mb-10 flex cursor-pointer items-center gap-3 px-4 text-inherit transition-opacity hover:opacity-80"
         >
-          <div className="bg-primary/20 flex h-10 w-10 items-center justify-center rounded-lg">
-            <Bell />
+          <div className="bg-primary shadow-primary/20 flex h-10 w-10 items-center justify-center rounded-xl shadow-lg">
+            <Bell className="h-5 w-5 text-white" />
           </div>
-          <span className="text-medium font-bold">Leave Dashboard</span>
+          <span className="text-lg font-black tracking-tight text-slate-900">HR Portal</span>
         </Link>
 
-        <h1 className="pb-2 pl-2 text-slate-400">Features</h1>
+        <h1 className="text-default-400 pb-4 pl-4 text-[10px] font-black tracking-[0.2em] uppercase">
+          Main Menu
+        </h1>
+
         <Listbox
           aria-label="Main Menu"
           variant="flat"
           color="primary"
+          // We use 'rounded-xl' for items because they are nested.
+          // Inner items should always have a smaller radius than the parent container.
           itemClasses={{
-            base: 'px-3 h-11 rounded-medium gap-3 mb-1 data-[hover=true]:bg-default-100/80 transition-all',
-            title:
-              'text-small font-medium text-default-600 group-data-[hover=true]:text-foreground',
+            base: 'px-4 h-12 rounded-xl gap-4 mb-2 data-[hover=true]:bg-primary/5 transition-all',
+            title: 'text-sm font-bold text-default-600 group-data-[hover=true]:text-primary',
           }}
         >
-          {/* HOME LINK */}
           <ListboxItem
             key="home"
-            aria-label="Home Navigation"
             href="/"
             as={Link}
-            className={pathname === ROUTES.home ? 'bg-primary/10 text-primary' : ''}
+            className={pathname === ROUTES.home ? 'bg-primary/10' : ''}
             startContent={
               <LayoutDashboard
                 className={pathname === ROUTES.home ? 'text-primary h-5 w-5' : iconClasses}
               />
             }
           >
-            <span className={pathname === ROUTES.home ? 'text-primary font-medium' : ''}>Home</span>
+            <span className={pathname === ROUTES.home ? 'text-primary font-bold' : ''}>
+              Dashboard
+            </span>
           </ListboxItem>
 
-          {/* EMAILS LINK */}
           <ListboxItem
             key="emails"
-            aria-label="Email Navigation"
             href="/emails"
             as={Link}
-            className={pathname === ROUTES.emails ? 'bg-primary/10 text-primary' : ''}
+            className={pathname === ROUTES.emails ? 'bg-primary/10' : ''}
             startContent={
               <Mail className={pathname === ROUTES.emails ? 'text-primary h-5 w-5' : iconClasses} />
             }
           >
-            <span className={pathname === ROUTES.emails ? 'text-primary font-medium' : ''}>
-              Emails
+            <span className={pathname === ROUTES.emails ? 'text-primary font-bold' : ''}>
+              Email Inbox
             </span>
           </ListboxItem>
         </Listbox>
       </div>
 
-      {/* BOTTOM SECTION */}
-      <Listbox variant="flat" aria-label="list-container">
-        <ListboxItem
-          key="logout"
-          aria-label="Sidebar Navigation"
-          className="group text-danger h-11"
-          color="danger"
-          startContent={<LogOut className="text-danger h-5 w-5" />}
-        >
-          Log Out
-        </ListboxItem>
-      </Listbox>
+      <div className="px-2">
+        <Listbox variant="flat" aria-label="Utility Menu">
+          <ListboxItem
+            key="logout"
+            className="group text-danger hover:bg-danger-50 h-12 rounded-xl transition-colors"
+            color="danger"
+            onPress={logout}
+            startContent={<LogOut className="text-danger h-5 w-5" />}
+          >
+            <span className="font-bold">Log Out</span>
+          </ListboxItem>
+        </Listbox>
+      </div>
     </aside>
   )
 }

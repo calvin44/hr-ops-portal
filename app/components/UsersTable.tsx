@@ -17,29 +17,25 @@ export const UsersTable: React.FC<UsersTableProps> = ({
   selectedUserId,
   isLoading,
 }) => {
-  /**
-   * Layout Constants
-   * We use a fixed grid template to ensure columns align perfectly
-   * between the header and the data rows.
-   */
   const gridTemplate = 'grid-cols-[0.8fr_2fr_1.5fr_1fr_1fr_1fr]'
   const minWidth = 'min-w-[950px]'
 
   return (
-    <Card shadow="none" className="h-full overflow-hidden rounded-2xl p-0">
-      {/* Table Title and Metadata Summary */}
-      <div className="flex shrink-0 items-center justify-between px-6 py-4">
-        <h1 className="text-default-800 text-xl font-bold">Employee Management</h1>
-        <span className="text-tiny text-default-400 bg-default-100 rounded px-2 py-1 font-mono">
+    // Updated to match the Sidebar: bg-white, shadow-xl, no border
+    <Card shadow="none" className="rounded-portal h-full overflow-hidden bg-white">
+      <div className="flex shrink-0 items-center justify-between px-8 py-6">
+        <h1 className="text-xl font-bold text-slate-800">Employee Management</h1>
+        <span className="text-tiny text-primary bg-primary/10 rounded-full px-3 py-1 font-bold">
           {sortedUserInfo.length} Members
         </span>
       </div>
 
       <CardBody className="relative h-full overflow-hidden p-0">
-        <div className="h-full overflow-x-auto overflow-y-auto">
-          {/* Sticky Header: backdrop-blur provides a premium feel during scroll */}
+        {/* We add 'isolate' here to create a new stacking context for animations */}
+        <div className="isolate h-full overflow-x-auto overflow-y-auto">
+          {/* Sticky Header: Increased z-index and removed border for a cleaner look */}
           <div
-            className={`grid ${gridTemplate} ${minWidth} text-tiny text-default-500 sticky top-0 z-20 bg-white/80 px-6 py-3 font-bold tracking-wider uppercase backdrop-blur-md`}
+            className={`grid ${gridTemplate} ${minWidth} text-default-400 sticky top-0 z-30 bg-white/90 px-8 py-4 text-[10px] font-black tracking-[0.2em] uppercase backdrop-blur-md`}
           >
             <span>Staff ID</span>
             <span>Name</span>
@@ -49,109 +45,82 @@ export const UsersTable: React.FC<UsersTableProps> = ({
             <span>Sick (D)</span>
           </div>
 
-          <div className="flex flex-col px-2 py-2">
-            {/* AnimatePresence (mode="wait") orchestrates the smooth cross-fade 
-                between the Skeleton state and the actual Data state.
-            */}
+          <div className="flex flex-col px-4 pb-4">
             <AnimatePresence mode="wait">
               {isLoading ? (
                 <motion.div
-                  key="skeleton-view"
+                  key="skeleton"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
                 >
                   {[...Array(6)].map((_, i) => (
                     <div
                       key={i}
-                      className={`grid ${gridTemplate} ${minWidth} items-center px-4 py-4`}
+                      className={`grid ${gridTemplate} ${minWidth} items-center gap-4 px-4 py-4`}
                     >
-                      <Skeleton className="h-4 w-12 rounded-md" />
-                      <Skeleton className="h-4 w-40 rounded-md" />
-                      <Skeleton className="h-4 w-24 rounded-md" />
-                      <Skeleton className="h-4 w-8 rounded-md" />
-                      <Skeleton className="h-4 w-8 rounded-md" />
-                      <Skeleton className="h-4 w-8 rounded-md" />
+                      <Skeleton className="h-4 w-12 rounded" />
+                      <Skeleton className="h-4 w-40 rounded" />
+                      <Skeleton className="h-4 w-24 rounded" />
+                      <Skeleton className="h-4 w-8 rounded" />
+                      <Skeleton className="h-4 w-8 rounded" />
+                      <Skeleton className="h-4 w-8 rounded" />
                     </div>
                   ))}
-                </motion.div>
-              ) : sortedUserInfo.length === 0 ? (
-                <motion.div
-                  key="empty-view"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-default-400 flex flex-col items-center gap-2 py-32 text-center"
-                >
-                  <p className="text-medium text-default-300 font-medium">No records found</p>
                 </motion.div>
               ) : (
                 <motion.div
                   key="data-view"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ duration: 0.4 }}
+                  // This ensures the layout animations are scoped to this container
+                  layout
                 >
-                  {/* Inner AnimatePresence (initial={false}) allows row re-ordering 
-                      to animate without a "flash" on the first mount.
-                  */}
-                  <AnimatePresence mode="popLayout" initial={false}>
-                    {sortedUserInfo.map((item) => {
-                      const isSelected = selectedUserId === item.id
+                  {sortedUserInfo.map((item) => {
+                    const isSelected = selectedUserId === item.id
 
-                      return (
-                        <div
-                          key={item.id}
-                          onClick={() => selectUser(new Set([item.id]))}
-                          className="group relative mb-1 cursor-pointer outline-none"
-                          role="button"
-                          tabIndex={0}
-                        >
-                          {/* Row Background: Selection vs Hover logic */}
-                          <div
-                            className={`absolute inset-0 rounded-xl transition-colors duration-200 ${
-                              isSelected ? 'bg-primary/10' : 'group-hover:bg-default-100/50'
-                            }`}
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => selectUser(new Set([item.id]))}
+                        className="group relative mb-1 cursor-pointer outline-none"
+                      >
+                        {/* THE FIX: We use a simpler transition for the highlight 
+                            to prevent it from jittering during scroll 
+                        */}
+                        {isSelected && (
+                          <motion.div
+                            layoutId="active-row-bg"
+                            className="bg-primary/10 absolute inset-0 z-0 rounded-2xl"
+                            transition={{ type: 'spring', stiffness: 500, damping: 40 }}
                           />
+                        )}
 
-                          {/* layoutId Spring: This enables the "sliding" effect 
-                              where the highlight moves smoothly between rows.
-                          */}
-                          {isSelected && (
-                            <motion.div
-                              layoutId="active-row-highlight"
-                              className="absolute inset-0 z-0 rounded-xl shadow-sm"
-                              transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-                            />
-                          )}
-
-                          <div
-                            className={`grid ${gridTemplate} ${minWidth} relative z-10 items-center px-4 py-4 transition-transform active:scale-[0.995]`}
-                          >
-                            <span className="text-default-400 font-mono text-xs">
-                              {item.user.staffId}
-                            </span>
-                            <span className="text-small text-default-700 font-semibold">
-                              {item.user.name}
-                            </span>
-                            <span className="text-small text-default-500">
-                              {item.user.chineseName || '—'}
-                            </span>
-                            <span className="text-small text-default-600 font-medium">
-                              {item.user.yearsOfService}
-                            </span>
-                            <span className="text-small text-primary-600 font-bold">
-                              {item.user.annualLeaveQuota}
-                            </span>
-                            <span className="text-small text-warning-600 font-bold">
-                              {item.user.sickLeaveQuota}
-                            </span>
-                          </div>
+                        <div
+                          className={`grid ${gridTemplate} ${minWidth} relative z-10 items-center px-4 py-4 transition-all duration-200 ${
+                            isSelected ? 'translate-x-1' : ''
+                          }`}
+                        >
+                          <span className="text-default-400 font-mono text-xs">
+                            {item.user.staffId}
+                          </span>
+                          <span className="text-sm font-bold text-slate-700">{item.user.name}</span>
+                          <span className="text-default-500 text-sm">
+                            {item.user.chineseName || '—'}
+                          </span>
+                          <span className="text-sm font-medium text-slate-600">
+                            {item.user.yearsOfService}
+                          </span>
+                          <span className="text-primary text-sm font-bold">
+                            {item.user.annualLeaveQuota}
+                          </span>
+                          <span className="text-warning text-sm font-bold">
+                            {item.user.sickLeaveQuota}
+                          </span>
                         </div>
-                      )
-                    })}
-                  </AnimatePresence>
+                      </div>
+                    )
+                  })}
                 </motion.div>
               )}
             </AnimatePresence>

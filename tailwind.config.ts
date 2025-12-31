@@ -1,22 +1,47 @@
 // tailwind.config.ts
-import { heroui } from '@heroui/react' // 1. Import the plugin
+import { heroui } from '@heroui/react'
 
-import type { Config } from 'tailwindcss'
-
-const config: Config = {
+/** @type {import('tailwindcss').Config} */
+module.exports = {
   content: [
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
-    // 2. THIS LINE IS CRITICAL:
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
     './node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      borderRadius: {
+        // Unifying your "4xl" style across the app
+        portal: '2rem',
+      },
+      spacing: {
+        // Unified height for alignment between Stats and Chart cards
+        'dashboard-card': '30rem',
+      },
+    },
   },
   darkMode: 'class',
-  // 3. Add the plugin
-  plugins: [heroui()],
+  plugins: [
+    heroui({
+      themes: {
+        light: {
+          colors: {
+            primary: {
+              DEFAULT: '#006FEE',
+              foreground: '#FFFFFF',
+            },
+            // Setting the slate-50 as the default app background
+            background: '#f8fafc',
+          },
+          layout: {
+            radius: {
+              small: '8px',
+              medium: '12px',
+              large: '16px',
+            },
+          },
+        },
+      },
+    }),
+  ],
 }
-
-export default config

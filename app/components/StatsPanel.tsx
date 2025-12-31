@@ -3,7 +3,6 @@
 import {
   Card,
   CardBody,
-  Divider,
   Progress,
   Skeleton,
   Chip,
@@ -14,8 +13,10 @@ import {
   ModalBody,
   useDisclosure,
 } from '@heroui/react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { UserLeaveReport } from '@types'
 import { useMemo } from 'react'
+import { AlertCircle, ChevronRight, PieChart } from 'lucide-react'
 
 interface StatsPanelProps {
   userInfo?: UserLeaveReport
@@ -28,10 +29,6 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ userInfo, isLoading }) =
   const stats = useMemo(() => {
     if (!userInfo) return null
 
-    /**
-     * Helper to transform raw leave hours into quota utilization metrics.
-     * Logic assumes 8-hour work days for quota conversion.
-     */
     const getQuotaStats = (type: 'Annual Leave' | 'Sick Leave', quotaDays: number) => {
       const total = quotaDays * 8
       const remainder = userInfo.stats.remainder[type] || 0
@@ -44,10 +41,6 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ userInfo, isLoading }) =
       }
     }
 
-    /**
-     * Filters and maps leave types that do not have a defined quota (e.g. Compassionate).
-     * Only displays types that have been utilized (> 0 hours).
-     */
     const otherEntries = Object.entries(userInfo.stats.leaveTaken)
       .filter(([key, value]) => key !== 'Annual Leave' && key !== 'Sick Leave' && value > 0)
       .map(([name, hours]) => ({ name, hours }))
@@ -65,113 +58,116 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ userInfo, isLoading }) =
 
   return (
     <>
-      {/* Container has a fixed height (h-120) to maintain visual 
-          alignment with the adjacent ChartSection across all user selections. 
-      */}
-      <Card shadow="none" className="border-default-200 h-120 overflow-hidden rounded-2xl">
-        <CardBody className="flex flex-col p-6">
-          {/* Summary Header */}
-          <div className="mb-6 shrink-0">
-            <h1 className="mb-4 text-2xl font-bold">Leave Stats</h1>
-            <div className="flex items-center justify-between">
-              <span className="text-default-500 text-small font-medium">Total Taken</span>
+      <Card shadow="none" className="border-divider h-dashboard-card overflow-hidden">
+        <CardBody className="flex flex-col p-8">
+          {/* Section 1: Header Summary */}
+          <div className="mb-8 shrink-0">
+            <div className="mb-1 flex items-center gap-2">
+              <PieChart size={18} className="text-primary" />
+              <h2 className="text-xl font-bold text-slate-800">Leave Stats</h2>
+            </div>
+            <p className="text-tiny text-default-400 mb-6 font-black tracking-[0.2em] uppercase">
+              Overview
+            </p>
+
+            <div className="bg-primary/5 border-primary/10 flex items-center justify-between rounded-2xl border p-4">
+              <span className="text-default-600 text-small font-bold">Total Hours Taken</span>
               {showSkeleton ? (
-                <Skeleton className="h-7 w-20 rounded-lg" />
+                <Skeleton className="h-8 w-20 rounded-lg" />
               ) : (
-                <span className="text-primary text-xl font-bold">{stats.totalLeaveTaken} hrs</span>
+                <div className="flex flex-col items-end">
+                  <span className="text-primary text-2xl font-black">{stats.totalLeaveTaken}h</span>
+                </div>
               )}
             </div>
-            <Divider className="mt-4 opacity-50" />
           </div>
 
-          {/* Core Quota Bars: Fixed to the top section of the card */}
-          <div className="mb-8 shrink-0 space-y-6">
-            <h3 className="text-default-400 text-tiny font-bold tracking-widest uppercase">
-              Utilization
-            </h3>
+          {/* Section 2: Quota Utilization Progress */}
+          <div className="flex-1 space-y-8">
             {[
               { label: 'Annual Leave', data: stats?.annual, color: 'primary' },
               { label: 'Sick Leave', data: stats?.sick, color: 'warning' },
             ].map((item) => (
-              <div key={item.label} className="space-y-2">
-                <div className="text-small flex justify-between font-semibold">
-                  <span>{item.label}</span>
-                  <span className="text-tiny text-default-400 font-mono">
-                    {showSkeleton ? '--/--' : `${item.data?.used}/${item.data?.total}`}
+              <div key={item.label} className="space-y-3">
+                <div className="flex items-end justify-between px-1">
+                  <span className="text-sm font-bold text-slate-700">{item.label}</span>
+                  <span className="text-tiny text-default-400 font-mono font-bold">
+                    {showSkeleton ? '-- / --' : `${item.data?.used} / ${item.data?.total} hrs`}
                   </span>
                 </div>
                 <Progress
                   size="md"
-                  radius="sm"
+                  radius="full"
                   value={showSkeleton ? 0 : Math.min(item.data?.percentage || 0, 100)}
+                  // If quota is exceeded, force color to Danger (Red)
                   color={!showSkeleton && item.data?.isOver ? 'danger' : (item.color as any)}
-                  className="h-2"
+                  className="h-2.5 shadow-inner"
                 />
+                {!showSkeleton && item.data?.isOver && (
+                  <div className="text-danger flex animate-pulse items-center gap-1 px-1 text-[10px] font-bold">
+                    <AlertCircle size={10} /> Quota Exceeded
+                  </div>
+                )}
               </div>
             ))}
           </div>
 
-          {/* Non-Quota Summary Footer: Pushed to the bottom using mt-auto 
-              to ensure consistent button placement. 
-          */}
-          <div className="mt-auto flex flex-col gap-4">
-            <div className="bg-default-50 border-default-100 rounded-2xl border-1 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-default-700 text-sm font-bold">Other Leaves</h4>
-                  <p className="text-tiny text-default-400">Non-quota accumulated hours</p>
-                </div>
-                {showSkeleton ? (
-                  <Skeleton className="h-8 w-12 rounded-lg" />
-                ) : (
-                  <span className="text-default-600 text-lg font-black">{stats.otherTotal}h</span>
-                )}
-              </div>
-            </div>
-
+          {/* Section 3: Non-Quota Breakdown Toggle */}
+          <div className="border-divider mt-auto border-t pt-6">
             <Button
               onPress={onOpen}
               isDisabled={showSkeleton || stats.others.length === 0}
               variant="flat"
               fullWidth
-              className="text-default-600 font-bold"
+              className="text-default-700 bg-default-100 hover:bg-default-200 h-12 rounded-xl font-bold transition-colors"
+              endContent={<ChevronRight size={16} />}
             >
-              View Breakdown
+              Other Leaves ({stats?.otherTotal || 0}h)
             </Button>
           </div>
         </CardBody>
       </Card>
 
-      {/* Detailed drill-down for non-quota leave types */}
+      {/* Drill-down Modal */}
       <Modal
         isOpen={isOpen}
         onOpenChange={onOpenChange}
         backdrop="blur"
         placement="center"
-        className="max-w-md"
+        motionProps={{
+          variants: {
+            enter: { y: 0, opacity: 1, transition: { duration: 0.3, ease: 'easeOut' } },
+            exit: { y: 20, opacity: 0, transition: { duration: 0.2, ease: 'easeIn' } },
+          },
+        }}
       >
-        <ModalContent>
-          {() => (
+        <ModalContent className="rounded-portal">
+          {(_) => (
             <>
-              <ModalHeader className="flex flex-col gap-1">
-                <h2 className="text-xl">Leave Breakdown</h2>
-                <p className="text-tiny text-default-400 font-normal">
-                  Details for {userInfo?.user.name}
+              <ModalHeader className="flex flex-col gap-1 px-8 pt-8">
+                <h2 className="text-2xl font-black">Breakdown</h2>
+                <p className="text-tiny text-default-400 font-bold tracking-widest uppercase">
+                  Non-quota records for {userInfo?.user.name}
                 </p>
               </ModalHeader>
-              <ModalBody className="pb-8">
+              <ModalBody className="px-8 pb-10">
                 <div className="space-y-3">
-                  {stats?.others.map((leave) => (
-                    <div
-                      key={leave.name}
-                      className="bg-default-50 border-default-100 flex items-center justify-between rounded-xl border-1 p-4"
-                    >
-                      <span className="text-small text-default-700 font-bold">{leave.name}</span>
-                      <Chip variant="shadow" color="primary" size="sm" className="font-bold">
-                        {leave.hours} hrs
-                      </Chip>
-                    </div>
-                  ))}
+                  <AnimatePresence>
+                    {stats?.others.map((leave, index) => (
+                      <motion.div
+                        key={leave.name}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="border-divider flex items-center justify-between rounded-2xl border bg-slate-50 p-4"
+                      >
+                        <span className="text-sm font-bold text-slate-700">{leave.name}</span>
+                        <Chip variant="flat" color="primary" size="sm" className="px-2 font-black">
+                          {leave.hours} hrs
+                        </Chip>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </div>
               </ModalBody>
             </>

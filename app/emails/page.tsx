@@ -1,10 +1,39 @@
 'use client'
 
-import { Card, CardHeader, CardBody, User, Button, Chip, Skeleton } from '@heroui/react'
-import { Send, Check, RotateCcw, Mails } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Card, CardHeader, CardBody, User, Button, Chip, Skeleton, Progress } from '@heroui/react'
+import { Send, Check, RotateCcw, Mails, Inbox } from 'lucide-react'
+import { useEffect, useState, useMemo } from 'react'
+import { motion, AnimatePresence, Variants } from 'framer-motion'
 import { apiServices } from '@services'
 import { UserLeaveReport } from '@types'
+
+// Animation Variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+  exit: { opacity: 0 },
+}
+
+const itemVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: 20,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      stiffness: 300,
+      damping: 24,
+    },
+  },
+}
 
 export default function EmailsPage() {
   const [userData, setUserData] = useState<UserLeaveReport[]>([])
@@ -14,47 +43,52 @@ export default function EmailsPage() {
   const [isSendingAll, setIsSendingAll] = useState(false)
 
   /**
- /**
-   * Browser Guard:
-   * Prevents accidental tab closure during batch processing.
-   * Silences ts(6385) by using the return value pattern instead of property assignment.
+   * Browser Guard
    */
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isSendingAll) {
         e.preventDefault()
-        // Modern standard: returning a string triggers the browser dialog
         return ''
       }
     }
-
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [isSendingAll])
 
   /**
-   * Data Initialization:
-   * Fetch and sort employee leave records.
+   * Data Initialization (Fixed Double Fetch)
    */
   useEffect(() => {
+    let isMounted = true // 1. Track mount status
+
     const fetchData = async () => {
       setIsLoading(true)
       try {
         const data = await apiServices.getLeaveData()
-        const sortedData = [...data].sort((a, b) => a.user.name.localeCompare(b.user.name))
-        setUserData(sortedData)
+
+        // 2. Only update state if the component is still mounted
+        if (isMounted) {
+          const sortedData = [...data].sort((a, b) => a.user.name.localeCompare(b.user.name))
+          setUserData(sortedData)
+        }
       } catch (err) {
-        console.error('Fetch Error:', err)
+        if (isMounted) console.error('Fetch Error:', err)
       } finally {
-        setIsLoading(false)
+        if (isMounted) setIsLoading(false)
       }
     }
+
     fetchData()
+
+    // 3. Cleanup function sets flag to false when effect re-runs or component unmounts
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   /**
-   * Single Email Logic:
-   * Handles individual API calls and updates local flight/success states.
+   * Single Email Logic
    */
   const handleSendMail = async (report: UserLeaveReport) => {
     if (sentIds.has(report.id) || sendingIds.has(report.id)) return
@@ -66,7 +100,6 @@ export default function EmailsPage() {
       setSentIds((prev) => new Set(prev).add(report.id))
     } catch (err) {
       console.error('Send Error:', err)
-      alert(err instanceof Error ? err.message : 'Failed to send mail')
     } finally {
       setSendingIds((prev) => {
         const next = new Set(prev)
@@ -77,156 +110,184 @@ export default function EmailsPage() {
   }
 
   /**
-   * Batch Processing Logic:
-   * Iterates through pending reports sequentially to respect SMTP limits.
+   * Batch Send Logic
    */
   const handleSendAll = async () => {
     setIsSendingAll(true)
     const pendingReports = userData.filter((report) => !sentIds.has(report.id))
 
     for (const report of pendingReports) {
-      try {
-        await handleSendMail(report)
-        // Artificial delay for UI visibility and SMTP kindness
-        await new Promise((resolve) => setTimeout(resolve, 200))
-      } catch (err) {
-        console.error(`Batch process failed for ${report.user.name}:`, err)
-        continue
-      }
+      await handleSendMail(report)
+      await new Promise((resolve) => setTimeout(resolve, 300))
     }
     setIsSendingAll(false)
   }
 
+  const batchProgress = useMemo(
+    () => (userData.length > 0 ? (sentIds.size / userData.length) * 100 : 0),
+    [sentIds.size, userData.length]
+  )
+
   return (
-    <Card className="h-full w-full" shadow="none">
-      <CardHeader className="flex items-center justify-between px-6 pt-6 pb-2">
-        <h1 className="text-2xl font-bold">Inbox</h1>
+    <Card className="rounded-portal h-full w-full border-none bg-white" shadow="none">
+      <CardHeader className="flex flex-col items-start gap-4 px-8 pt-8 pb-4">
+        <div className="flex w-full items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-900">Email Dispatch</h1>
+            <p className="text-default-400 text-xs font-medium">
+              Manage and monitor employee leave notifications
+            </p>
+          </div>
 
-        <div className="flex items-center gap-4">
-          {isSendingAll && (
-            <div
-              className="fixed inset-0 z-100 cursor-wait bg-black/5"
-              onClick={(e) => e.preventDefault()}
-            />
-          )}
+          <div className="flex items-center gap-3">
+            {sentIds.size > 0 && !isSendingAll && (
+              <Button
+                variant="flat"
+                size="sm"
+                onPress={() => setSentIds(new Set())}
+                startContent={<RotateCcw className="h-3 w-3" />}
+                className="font-bold"
+              >
+                Reset Status
+              </Button>
+            )}
 
-          {sentIds.size > 0 && !isSendingAll && (
             <Button
-              variant="light"
-              size="sm"
-              onPress={() => setSentIds(new Set())}
-              startContent={<RotateCcw className="h-3 w-3" />}
+              color="primary"
+              onPress={handleSendAll}
+              isLoading={isSendingAll}
+              isDisabled={isLoading || userData.length === 0 || sentIds.size === userData.length}
+              startContent={!isSendingAll && <Mails className="h-4 w-4" />}
+              className="shadow-primary/20 h-12 rounded-xl px-6 font-bold shadow-lg"
             >
-              Reset Status
+              {sentIds.size === userData.length
+                ? 'All Delivered'
+                : sentIds.size > 0
+                  ? `Send Remaining (${userData.length - sentIds.size})`
+                  : 'Send Batch'}
             </Button>
-          )}
-
-          <Button
-            color="primary"
-            onPress={handleSendAll}
-            isLoading={isSendingAll}
-            isDisabled={isLoading || userData.length === 0 || sentIds.size === userData.length}
-            // Show the Mails icon only when not loading
-            startContent={!isSendingAll && <Mails className="h-4 w-4" />}
-          >
-            {sentIds.size === userData.length
-              ? 'All Sent'
-              : sentIds.size > 0
-                ? `Send Remaining (${userData.length - sentIds.size})`
-                : 'Send All Mail'}
-          </Button>
+          </div>
         </div>
+
+        <AnimatePresence>
+          {isSendingAll && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="w-full pt-2"
+            >
+              <Progress
+                value={batchProgress}
+                color="primary"
+                size="sm"
+                radius="full"
+                label={`Progress: ${sentIds.size} / ${userData.length} sent`}
+                className="max-w-full"
+                classNames={{
+                  label: 'text-tiny font-bold text-primary uppercase tracking-wider',
+                }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </CardHeader>
 
-      <CardBody className="gap-3 p-6">
-        {isLoading ? (
-          [...Array(4)].map((_, i) => (
-            <Card key={i} shadow="none" className="border-default-200 w-full rounded-xl p-4">
-              <CardBody className="flex flex-row items-center justify-between gap-4 p-4">
-                <div className="flex items-center gap-4">
-                  <Skeleton className="flex h-10 w-10 rounded-full" />
-                  <div className="flex flex-col gap-2">
-                    <Skeleton className="h-3 w-32 rounded-lg" />
-                    <Skeleton className="h-2 w-48 rounded-lg" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Skeleton className="h-3 w-16 rounded-lg" />
-                  <Skeleton className="h-10 w-28 rounded-xl" />
-                </div>
-              </CardBody>
-            </Card>
-          ))
-        ) : userData.length > 0 ? (
-          userData.map((report) => {
-            const isSent = sentIds.has(report.id)
-            const isSending = sendingIds.has(report.id)
+      <CardBody className="gap-3 overflow-y-auto px-8 pb-8">
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <motion.div
+              key="loading-skeleton"
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="flex flex-col gap-3"
+            >
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} disableAnimation className="h-20 w-full rounded-2xl" />
+              ))}
+            </motion.div>
+          ) : userData.length > 0 ? (
+            <motion.div
+              key="data-list"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="flex flex-col gap-3"
+            >
+              {userData.map((report) => {
+                const isSent = sentIds.has(report.id)
+                const isSending = sendingIds.has(report.id)
 
-            return (
-              <Card
-                key={report.id}
-                shadow="none"
-                className={`border-default-200 w-full rounded-xl border-1 transition-all duration-300 ${
-                  isSent
-                    ? 'bg-success-50/30 border-success-200 opacity-80'
-                    : 'hover:border-primary-200 bg-slate-50/50'
-                }`}
-              >
-                <CardBody className="flex flex-row items-center justify-between gap-4 p-4">
-                  <div className="flex items-center gap-4">
-                    <User
-                      name={report.user.name}
-                      description={report.user.email}
-                      avatarProps={{
-                        showFallback: true,
-                        name: report.user.name,
-                        color: isSent ? 'success' : 'default',
-                        className: `font-bold uppercase shrink-0 transition-colors ${
-                          isSent
-                            ? 'bg-success-100 text-success-600'
-                            : 'bg-primary-100 text-primary-600'
-                        }`,
-                      }}
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    {isSent && (
-                      <Chip
-                        color="success"
-                        variant="flat"
-                        size="sm"
-                        startContent={<Check className="h-3 w-3" />}
-                        className="border-none font-medium"
-                      >
-                        Sent
-                      </Chip>
-                    )}
-
-                    <Button
-                      size="md"
-                      variant={isSent ? 'light' : 'flat'}
-                      color={isSent ? 'success' : 'primary'}
-                      className="font-bold"
-                      isLoading={isSending}
-                      isDisabled={isSent || isSendingAll}
-                      onPress={() => handleSendMail(report)}
-                      startContent={
-                        isSent ? <Check className="h-4 w-4" /> : <Send className="h-4 w-4" />
-                      }
+                return (
+                  <motion.div key={report.id} variants={itemVariants}>
+                    <Card
+                      shadow="none"
+                      className={`transition-all duration-300 ${
+                        isSent ? 'bg-success-50/20 opacity-80' : 'bg-slate-50 hover:bg-white'
+                      }`}
                     >
-                      {isSent ? 'Delivered' : 'Send Mail'}
-                    </Button>
-                  </div>
-                </CardBody>
-              </Card>
-            )
-          })
-        ) : (
-          <div className="border-default-100 text-default-300 flex h-40 items-center justify-center rounded-2xl border-2 border-dashed italic">
-            No employee records found
-          </div>
-        )}
+                      <CardBody className="flex flex-row items-center justify-between gap-4 p-4">
+                        <User
+                          name={report.user.name}
+                          description={report.user.email}
+                          avatarProps={{
+                            showFallback: true,
+                            name: report.user.name,
+                            color: isSent ? 'success' : 'primary',
+                            className: 'font-bold',
+                          }}
+                        />
+
+                        <div className="flex items-center gap-4">
+                          {isSent && (
+                            <Chip
+                              color="success"
+                              variant="flat"
+                              size="sm"
+                              startContent={<Check className="h-3 w-3" />}
+                              className="text-success-600 border-none font-bold"
+                            >
+                              Sent
+                            </Chip>
+                          )}
+
+                          <Button
+                            size="md"
+                            variant={isSent ? 'light' : 'flat'}
+                            color={isSent ? 'success' : 'primary'}
+                            className="rounded-xl font-bold"
+                            isLoading={isSending}
+                            isDisabled={isSent || isSendingAll}
+                            onPress={() => handleSendMail(report)}
+                            startContent={
+                              isSent ? <Check className="h-4 w-4" /> : <Send className="h-4 w-4" />
+                            }
+                          >
+                            {isSent ? 'Delivered' : 'Send Mail'}
+                          </Button>
+                        </div>
+                      </CardBody>
+                    </Card>
+                  </motion.div>
+                )
+              })}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="empty-state"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center justify-center py-20 text-center"
+            >
+              <div className="bg-default-50 mb-4 flex h-20 w-20 items-center justify-center rounded-full">
+                <Inbox className="text-default-300 h-10 w-10" />
+              </div>
+              <h3 className="text-default-700 text-lg font-bold">All caught up!</h3>
+              <p className="text-default-400 text-sm">No leave reports pending action.</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </CardBody>
     </Card>
   )
