@@ -37,6 +37,7 @@ interface User {
   yearsOfService: number
   annualLeaveQuota: number
   sickLeaveQuota: number
+  managers: string[]
 }
 
 export interface UserLeaveReport {

@@ -98,8 +98,15 @@ export async function mergeUsersWithData(
     )
 
     const matchedUserEmail = normalizeEmail(matchedUser?.email || '')
-    const { staffId, chineseName, email, yearsOfService, annualLeaveQuota, sickLeaveQuota } =
-      lookupLeaveData[matchedUserEmail]
+    const {
+      staffId,
+      chineseName,
+      email,
+      yearsOfService,
+      annualLeaveQuota,
+      sickLeaveQuota,
+      managers,
+    } = lookupLeaveData[matchedUserEmail]
 
     return {
       id: uuidv4(),
@@ -111,6 +118,7 @@ export async function mergeUsersWithData(
         yearsOfService,
         annualLeaveQuota,
         sickLeaveQuota,
+        managers,
       },
       stats: {
         leaveTaken: record.leaveTaken,
