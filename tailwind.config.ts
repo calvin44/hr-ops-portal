@@ -11,8 +11,12 @@ module.exports = {
   theme: {
     extend: {
       borderRadius: {
-        // Unifying your "4xl" style across the app
-        portal: '2rem',
+        // The "Wrapper" or Layout Container
+        'portal-lg': '32px',
+        // Sidebar, Main Cards (The "rounded-portal" you use now)
+        portal: '20px',
+        // Inner items: Buttons, Inputs, Chips
+        'portal-sm': '12px',
       },
       spacing: {
         // Unified height for alignment between Stats and Chart cards

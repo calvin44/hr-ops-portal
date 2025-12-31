@@ -80,7 +80,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({ selectedUserInfo, is
   }
 
   return (
-    <Card shadow="none" className="h-full overflow-hidden rounded-2xl">
+    <Card shadow="none" className="rounded-portal h-full overflow-hidden">
       <CardBody className="flex h-full flex-col p-6">
         <div className="mb-6 flex shrink-0 items-center justify-between">
           <h1 className="text-2xl font-bold">Leave History</h1>
@@ -101,8 +101,8 @@ export const ChartSection: React.FC<ChartSectionProps> = ({ selectedUserInfo, is
                 exit={{ opacity: 0 }}
                 className="h-full w-full"
               >
-                <Skeleton className="h-full w-full rounded-2xl">
-                  <div className="bg-default-200 h-full w-full rounded-2xl" />
+                <Skeleton className="rounded-portal h-full w-full">
+                  <div className="bg-default-200 rounded-portal h-full w-full" />
                 </Skeleton>
               </motion.div>
             ) : (

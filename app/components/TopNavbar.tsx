@@ -8,7 +8,10 @@ export function TopNavbar() {
   const displayName = user?.displayName || user?.email?.split('@')[0] || 'Admin'
 
   return (
-    <Card shadow="none" className="w-full flex-row items-center justify-between px-6 py-8">
+    <Card
+      shadow="none"
+      className="rounded-portal w-full flex-row items-center justify-between px-6 py-8"
+    >
       <div>
         <h1 className="text-xl font-bold tracking-tight">Portal Overview</h1>
         <p className="text-default-500 text-xs font-medium">
