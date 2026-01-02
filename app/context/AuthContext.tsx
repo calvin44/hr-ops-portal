@@ -8,12 +8,13 @@ import {
   GoogleAuthProvider,
   signOut,
 } from 'firebase/auth'
-import { auth } from '@lib/firebase'
+import { auth, db } from '@lib/firebase'
+import { doc, onSnapshot } from 'firebase/firestore'
 import { Spinner, Button, Card, CardBody } from '@heroui/react'
 import { ShieldCheck, AlertCircle, ArrowLeft, UserX } from 'lucide-react'
 import { motion, AnimatePresence, Transition } from 'framer-motion'
+import { getAllowedEmails } from '@lib/firestore'
 
-// Unified Spring Transition for all "Portal" animations
 const portalSpring: Transition = { type: 'spring', stiffness: 300, damping: 30 }
 
 interface AuthContextType {
@@ -37,6 +38,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [error, setError] = useState<string | null>(null)
   const [isDenied, setIsDenied] = useState(false)
 
+  // Subscribes to Firebase Auth state
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => {
       setUser(u)
@@ -44,35 +46,81 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     })
   }, [])
 
+  // Defensive real-time security watcher to handle multi-tab/cache stability
+  useEffect(() => {
+    if (!user) return
+
+    const userEmail = user.email?.trim().toLowerCase()
+    if (!userEmail) return
+
+    const configRef = doc(db, 'config', 'allowedEmails')
+
+    const unsubscribe = onSnapshot(
+      configRef,
+      (snapshot) => {
+        // Ignore local "optimistic" updates to prevent race conditions
+        if (snapshot.metadata.hasPendingWrites) return
+
+        const data = snapshot.data()
+        const allowedEmails = (data?.emails || [])
+          .map((e: string) => e.trim().toLowerCase())
+          .filter((e: string) => e.length > 0)
+
+        // AUTHORITATIVE CHECK:
+        // isMissing: The user definitely shouldn't be here (doc gone or email removed)
+        // isSyncing: A safe-guard for new tabs; if data is only from cache and empty, wait for server
+        const isMissing = !snapshot.exists() || !allowedEmails.includes(userEmail)
+        const isSyncing = snapshot.metadata.fromCache && allowedEmails.length === 0
+
+        if (isMissing && !isSyncing) {
+          setIsDenied(true)
+          signOut(auth)
+        }
+      },
+      (error) => console.error('Security Watcher Error:', error)
+    )
+
+    return () => unsubscribe()
+  }, [user])
+
   const login = async () => {
     setIsLoggingIn(true)
     setError(null)
     setIsDenied(false)
     const provider = new GoogleAuthProvider()
-    const ALLOWED_EMAILS = process.env.NEXT_PUBLIC_ALLOWED_ADMIN_EMAILS?.split(',') || []
 
     try {
-      const result = await signInWithPopup(auth, provider)
-      const email = result.user.email
+      const allowedEmails = await getAllowedEmails()
 
-      if (!email || !ALLOWED_EMAILS.includes(email)) {
+      if (allowedEmails.length === 0) {
+        setError('Security configuration missing. Contact Admin.')
+        setIsLoggingIn(false)
+        return
+      }
+
+      const result = await signInWithPopup(auth, provider)
+      const email = result.user.email?.trim().toLowerCase()
+
+      if (!email || !allowedEmails.includes(email)) {
         await signOut(auth)
         setIsDenied(true)
         return
       }
     } catch (err: any) {
-      // HANDLE POPUP CLOSED BY USER
       if (err.code === 'auth/popup-closed-by-user') {
-        setError('Sign-in cancelled. Please try again when ready.')
+        setError('Sign-in cancelled. Please try again.')
       } else {
-        setError(err.message || 'An unexpected error occurred.')
+        setError(err.message || 'Unauthorized access.')
       }
     } finally {
       setIsLoggingIn(false)
     }
   }
 
-  const logout = () => signOut(auth)
+  const logout = () => {
+    setIsDenied(false)
+    signOut(auth)
+  }
 
   if (loading) {
     return (
@@ -85,7 +133,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   if (!user) {
     return (
       <div className="bg-background relative flex h-screen w-full items-center justify-center overflow-hidden">
-        {/* Unifying the background with the new portal design tokens */}
         <div className="bg-primary-500/10 absolute -top-[10%] -left-[10%] h-[50%] w-[50%] rounded-full blur-[120px]" />
 
         <motion.div
@@ -107,10 +154,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                       <UserX className="text-danger h-10 w-10" />
                     </div>
                     <h1 className="mb-3 text-3xl leading-tight font-black text-slate-900">
-                      Access Denied
+                      Access Restricted
                     </h1>
                     <p className="text-default-500 mb-8 leading-relaxed font-medium">
-                      This email is not registered. Please contact the system admin for access.
+                      Your account does not have permission to view this portal. Please contact HR
+                      if you believe this is an error.
                     </p>
                     <Button
                       color="default"
@@ -120,7 +168,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                       className="h-14 w-full font-bold"
                       startContent={<ArrowLeft size={18} />}
                     >
-                      Try Different Account
+                      Return to Login
                     </Button>
                   </motion.div>
                 ) : (
@@ -135,13 +183,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     </div>
                     <h1 className="mb-3 text-4xl font-black text-slate-900">HR Portal</h1>
                     <p className="text-default-500 mb-8 leading-relaxed font-medium">
-                      Secure identification required to <br /> manage employee records.
+                      Secure identification required to manage employee records.
                     </p>
+
                     {error && (
                       <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
                         className={`mb-6 flex items-center gap-2 rounded-xl border p-3 text-xs font-bold transition-colors ${
                           error.includes('cancelled')
                             ? 'bg-default-100 text-default-600 border-default-200'
@@ -152,6 +200,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         {error}
                       </motion.div>
                     )}
+
                     <Button
                       color="primary"
                       size="lg"
@@ -163,6 +212,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                           <img
                             src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
                             className="h-5 w-5 rounded-full bg-white p-0.5"
+                            alt="Google"
                           />
                         )
                       }

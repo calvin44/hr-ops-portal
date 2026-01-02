@@ -4,7 +4,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Listbox, ListboxItem } from '@heroui/react'
-import { LayoutDashboard, Mail, LogOut, Bell } from 'lucide-react'
+import { LayoutDashboard, Mail, LogOut, Bell, Users } from 'lucide-react'
 import { ROUTES } from '@config'
 import { useAuth } from '@context'
 
@@ -45,7 +45,7 @@ export function Sidebar() {
         >
           <ListboxItem
             key="home"
-            href="/"
+            href={ROUTES.home}
             as={Link}
             className={pathname === ROUTES.home ? 'bg-primary/10' : ''}
             startContent={
@@ -61,7 +61,7 @@ export function Sidebar() {
 
           <ListboxItem
             key="emails"
-            href="/emails"
+            href={ROUTES.emails}
             as={Link}
             className={pathname === ROUTES.emails ? 'bg-primary/10' : ''}
             startContent={
@@ -71,6 +71,18 @@ export function Sidebar() {
             <span className={pathname === ROUTES.emails ? 'text-primary font-bold' : ''}>
               Mail Users
             </span>
+          </ListboxItem>
+
+          <ListboxItem
+            key="users"
+            href={ROUTES.users}
+            as={Link}
+            className={pathname === ROUTES.users ? 'bg-primary/10' : ''}
+            startContent={
+              <Users className={pathname === ROUTES.users ? 'text-primary h-5 w-5' : iconClasses} />
+            }
+          >
+            <span className={pathname === ROUTES.users ? 'text-primary font-bold' : ''}>Users</span>
           </ListboxItem>
         </Listbox>
       </div>
