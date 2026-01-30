@@ -84,9 +84,11 @@ export async function POST(req: NextRequest) {
     // Recipient Redirection Logic (Dev vs Prod)
     const finalTo = isDev ? (TEST_EMAIL as string) : user.email
     const finalCc = isDev ? [TEST_EMAIL as string] : user.managers || []
+
+    const currentMonth = new Date().toLocaleString('en-US', { month: 'long' })
     const finalSubject = isDev
-      ? `[TEST] Monthly Leave Summary - ${user.name}`
-      : `Monthly Leave Summary - ${user.name}`
+      ? `[TEST] ${currentMonth} Leave Summary - ${user.name}`
+      : `${currentMonth} Leave Summary - ${user.name}`
 
     // Send the Email
     const mailInfo = await transporter.sendMail({

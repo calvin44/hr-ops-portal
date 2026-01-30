@@ -22,7 +22,7 @@ export const generateEmailTemplate = (data: UserLeaveReport, chartUrl: string) =
       <h2 style="color: #111; margin-top: 0;">Leave Usage Summary</h2>
       <p>Dear ${user.name},</p>
       
-      <p>You are receiving this email as part of our monthly HR automation workflow. Below is your personalized leave record as of <strong>August 2025</strong>:</p>
+      <p>You are receiving this email as part of our monthly HR automation workflow. Below is your personalized leave record:</p>
       
       <ul style="list-style-type: none; padding-left: 0;">
         <li style="margin-bottom: 5px;"><strong>Annual Leave Taken:</strong> ${annualTaken} hours</li>
