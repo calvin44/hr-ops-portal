@@ -92,12 +92,19 @@ export async function mergeUsersWithData(
 ): Promise<UserLeaveReport[]> {
   const leaveData = await getLeaveData()
   const lookupLeaveData = convertToLookupObject(leaveData)
-  return taskData.map((record) => {
+  return taskData.flatMap((record) => {
     const matchedUser = asanaUsers.find(
       (u) => u.name.trim().toLowerCase() === record.userName.trim().toLowerCase()
     )
 
     const matchedUserEmail = normalizeEmail(matchedUser?.email || '')
+    const sheetEntry = lookupLeaveData[matchedUserEmail]
+
+    if (!sheetEntry) {
+      console.warn(`[mergeUsersWithData] No Google Sheet entry for "${record.userName}" (${matchedUserEmail}) — skipping`)
+      return []
+    }
+
     const {
       staffId,
       chineseName,
@@ -106,7 +113,7 @@ export async function mergeUsersWithData(
       annualLeaveQuota,
       sickLeaveQuota,
       managers,
-    } = lookupLeaveData[matchedUserEmail]
+    } = sheetEntry
 
     return {
       id: uuidv4(),
